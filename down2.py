@@ -12,10 +12,12 @@ import requests
 import downloader
 import fili_links
 import informator
-
+import proxy_manager #tutaj to importuje, żeby nie było tego czekana na początku na GUI	
 
 useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0'
 headers = {'User-Agent': useragent}
+
+
 
 # def start(url, name, best_audio):
 	# print("Starting: ", url, name)
@@ -34,6 +36,7 @@ headers = {'User-Agent': useragent}
 	
 	
 def get_host_links(fili_links, audio_flinks):
+	#informator.info('Szukanie linków na fili...')
 	host_links = []
 	audio_hlinks = []
 	for url in fili_links:
@@ -47,7 +50,7 @@ def get_host_links(fili_links, audio_flinks):
 				audio_hlinks.append(file_url)
 			print("Got it!")
 		except:
-			print(traceback.format_exc())
+			#print(traceback.format_exc())
 			print("Can't break captcha... Trying another link")
 	set_no_proxy()
 	return host_links, audio_hlinks
@@ -58,9 +61,9 @@ def check_openload(file_url):
 		return file_url.replace("embed", "f")
 	return file_url
 			
-			
+	
 def captcha_avoid(url):
-	import proxy_manager #tutaj to importuje, żeby nie było tego czekana na początku na GUI
+	proxy_manager.start()
 	print(url)
 	req = Request(url, headers=headers) 
 	start_time = time.time()
@@ -71,15 +74,20 @@ def captcha_avoid(url):
 				'User-Agent': useragent}
 			proxies = {
 				'https': 'http://' + str(proxy)}
-			html = requests.get(url, headers=curr_headers, proxies=proxies, timeout=5).text
+			r = requests.get(url, headers=curr_headers, proxies=proxies, timeout=5)
+			if r.status_code == 403: #to oznacza brak takiego pliku, prawidłowy to 200
+				print('On this page there is no file, breaking')
+				break
+			html = r.text
 			file_url = re.search("var url = '(.+)';", html).group(1)
+			
 			print(file_url)
 			print(f'Avoided! czas potrzebny: {time.time() - start_time}')
 			#rank_proxy(proxy, 2)
 			return file_url
 		except:
 			#print(traceback.format_exc())
-			print("Oops! Give me a next try...")
+		#	print("Oops! Give me a next try...")
 			#rank_proxy(proxy, -7)
 			continue
 	raise Exception("Can't break captcha... :(")
@@ -99,29 +107,35 @@ def get_dl_links(host_links, audio_flinks):
 				print("Rendering...")
 				buddy.html.render(keep_page=True)#to be sure about closing/EUREKA! with this i get links in 3 secs in one try
 				print("Rendered")
+				session.browser.close()
 				session.close()
 				
 			except:
+				#informator.error(traceback.format_exc())
 				print(traceback.format_exc())
+				session.browser.close()
 				session.close()
 				continue
 				
 			try:
 				dl_butt = buddy.html.xpath('//div[.="mp4"]/parent::div/following-sibling::div')[0]
 				dl_link = dl_butt.links.pop() #te links to 'set' czyli coś jak przedział na matmie i trzeba zpopować to
+				print(f'Link to file: {dl_link}')
 				print(f"Got it in: {time.time()-start_time}")
-				informator.info(f'Znaleziono link do pliku: {dl_link}')
+				
+				#informator.info(f'Znaleziono link!')
 				#dl_links.append(dl_link)
 				return dl_link
 				
 			except Exception: #lxml.etree.XPathEvalError:
+				#informator.error(traceback.format_exc())
 				#print(traceback.format_exc())
 				print("Oops, failed :( Trying again...")
 	
 	
 	def test_link(link):
 		print('Testing link')
-		informator.info('Sprawdzanie prędkości hosta')
+		#informator.info('Sprawdzanie prędkości hosta')
 		
 		points = 0
 		try:
@@ -156,8 +170,9 @@ def get_dl_links(host_links, audio_flinks):
 			return 'a' # żeby umieścić na początku
 		else:
 			return 'z' # a tu na końcu 
+	
 	print("Searching for download links...")
-	informator.info("Szukanie linków do plików...")
+	#informator.info("Szukanie linków do plików...")
 	dl_links = []
 	rank = {}
 	threads = []
@@ -192,7 +207,7 @@ def download(links, name):
 	for link in links:
 		try:
 			print(f"Downloading from: {link}")
-			informator.info("Pobieranie...")
+			informator.info(f"Pobieranie {name}")
 			dl = downloader.start(link, name, 8)
 			return #kończe pętle, bo pobrałem
 		except Exception:

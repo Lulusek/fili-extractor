@@ -14,6 +14,7 @@ import atexit
 s = HTMLSession() #i need global htmlsession bcs i can't create new one in thread other than main
 s.browser					#https://github.com/kennethreitz/requests-html/issues/155
 
+
 MAX_SIZE = 40
 MIN_SIZE = 10
 
@@ -84,7 +85,8 @@ def get_proxies_from_web(amount=50):
 	#with HTMLSession() as s:
 	site = s.post(url, headers=headers, data=data)
 	site.html.render(reload=False)#, keep_page=True) #without reload it will download site again WITHOUT data=data 
-																								 #keep page to be sure about closing chromium
+																									 #keep page to be sure about closing chromium
+
 	html = site.html.html
 	
 	#with open('a.html', 'w+') as f:
@@ -315,24 +317,29 @@ class Supervisor():
 			return False
 		
 def wait_for_main_thread():
+	print('CLOSING PROXY MANAGER')
+	s.browser.close()
 	s.close()
 
 	
-atexit.register(wait_for_main_thread) #https://stackoverflow.com/questions/45267439/fatal-python-error-and-bufferedwriter
+#atexit.register(wait_for_main_thread) #https://stackoverflow.com/questions/45267439/fatal-python-error-and-bufferedwriter
+def start():
+	global proxies
+	global proxy_rank
+	if not proxies:
+		proxies, proxy_rank = get_proxies_from_file()
 
-proxies, proxy_rank = get_proxies_from_file()
 
+		if len(proxies) < (MAX_SIZE+MIN_SIZE)/2:
+			Appender((MAX_SIZE+MIN_SIZE)-len(proxies)).append_new_proxies()
 
-if len(proxies) < (MAX_SIZE+MIN_SIZE)/2:
-	Appender((MAX_SIZE+MIN_SIZE)-len(proxies)).append_new_proxies()
+		#print(get_proxies_from_web(100))
+		Supervisor().start()
 
-#print(get_proxies_from_web(100))
-Supervisor().start()
+	# for proxy in proxies:
+		# check_proxy(proxy)
 
-# for proxy in proxies:
-	# check_proxy(proxy)
-
-#time.sleep(10)
+	#time.sleep(10)
 
 
 

@@ -11,6 +11,8 @@ import sys
 import time
 import queue
 import os 
+import traceback
+
 
 class ConfigChunk():
 	MAX_DIGITS = 30
@@ -22,8 +24,6 @@ class ConfigChunk():
 		self.container = tk.Frame(root)
 		self.container.grid(row=self.id, column=0,	sticky='NSWE')
 		self.container.grid_columnconfigure(0, weight=1) #https://stackoverflow.com/questions/28419763/expand-text-widget-to-fill-the-entire-parent-frame-in-tkinter
-		
-		#self.container['bg'] = 'yellow' #debug
 		
 		#EPISODE_LIST, URL_LIST, SERIES_NAME
 		if type == 'SERIES':
@@ -37,8 +37,7 @@ class ConfigChunk():
 			self.movie(url, name)
 		
 		last_col, last_row = self.container.grid_size()
-		#print(last_col, last_row)
-		print(self.container.grid_size())
+		#print(self.container.grid_size())
 		self.sep = ttk.Separator(self.container, orient='horizontal')
 		self.sep.grid(column=0, columnspan=2, row=last_row, sticky='WE')
 		
@@ -114,10 +113,12 @@ class ConfigChunk():
 		self.checkbutt.select()
 		self.checkbutt.grid(row=0, column=1)
 
+		
 class App():
 	def __init__(self): 
 		self.queue = queue.Queue()
 		threading.Thread(target=self.create_app, daemon=True).start() #bcs calling fili2 in other thread than main will make problems, so run gui in other thread, daemon to have ability to exit
+		self.queue.put(lambda: __import__('proxy_manager'))
 		time.sleep(0.5)
 		while True:
 			try:
@@ -128,15 +129,20 @@ class App():
 			except KeyboardInterrupt:
 				print('KeyboardInterrupt')
 				sys.exit(1)
+		print('skończył się init lol')
+		time.sleep(100)
 
 
 	def main_thread(self):
 		while True:
 			try:
-				callback = self.queue.get(False) 
+				callback = self.queue.get()#False) 
 			except queue.Empty: 
 				break
 			callback()
+		while True:
+			print("main thread spi...")
+			time.sleep(30) #żeby program sie nie wyłączył
 	
 	
 	def initialize(self):
@@ -163,7 +169,6 @@ class App():
 				episode_list = [episode for url, episode in full_list]#['['+fili2.get_ep_number(url)+'] '+episode for url, episode in full_list]
 				url_list = [url for url, episode in full_list]
 				series_name = fili2.get_name_of_series(full_list[0][0])
-				#print(full_list)
 				self.config_chunks.append(ConfigChunk(type='SERIES', root=self.config_box, episode_list=episode_list, 
 																							url_list=url_list, series_name=series_name, id=self.urls.index(url)))
 			elif url_type == 'EPISODE':
@@ -186,17 +191,107 @@ class App():
 			
 			
 	def start(self):
-		# def __get_later_links():
-			
-				
-		# dl_link_getter = threading.Thread(name='dl_link_getter', target=__get_later_links, daemon=True) #żeby się gui nie ścieło
-		# dl_link_getter.start()
+		def simulate():
+			while True: #wykonuje dopóki skończy mi się queue
+				try:
+					dl_links, path_name = self.result_queue.get()
+				except queue.Empty: 
+					informator.success('Skończono') # to nie jest callowane z jakiegos powodu
+					break
+				print("DL LINKS: ", dl_links, " PATH_NAME: ", path_name)
+				if not dl_links:
+					informator.warning("NIE MA DLINKOW DLA ", path_name, ', KONTYNUUJE')
+					continue
+				informator.info(f'Pobieram {path_name.split("/").pop()}...')
+				down2.download(dl_links, path_name)
+				informator.success(f'Pobrano!')
+
+		informator.success('Zaczynam')
 		self.start_butt['command'] = self.stop
 		self.start_butt['text'] = 'Pauza'
 		
-		self.queue.put(self.start_download)
-	
+		self.result_queue = queue.Queue()
 		
+		print (self.urls, len(self.urls))
+		for i in range(len(self.urls)):
+			self.queue.put(lambda: self.__get_later_links(i))
+		
+		threading.Thread(name='Downloader', target=simulate, daemon=True).start()
+	
+	
+	def __get_later_links(self, i):
+		type = self.config_chunks[i].type
+		best_audio = self.get_best_audio()
+		
+		if type == 'SERIES':
+			start_index = self.config_chunks[i].start_slider.get()
+			end_index = self.config_chunks[i].end_slider.get() + 1 
+			url_list = self.config_chunks[i].url_list[start_index:end_index]
+			episode_list = self.config_chunks[i].episode_list[start_index:end_index]
+			
+			full_list = []
+			for i in range(len(url_list)):
+				full_list.append((url_list[i], episode_list[i])) 
+			
+			series_name = fili2.get_name_of_series(url_list[0])
+			
+			debug_list = []
+			for url, ep_name in full_list:
+				path_name = f'{self.dl_dir}/{series_name}/{ep_name}.mp4'
+				print(path_name)
+				if os.path.isdir(f"{self.dl_dir}/{series_name}"):
+					if os.path.exists(path_name):
+						informator.success(f'Już znajduje się na dysku: {path_name}')
+						continue
+				else:
+					informator.info(f'Tworzę folder {self.dl_dir}/{series_name}')
+					os.mkdir(f"{self.dl_dir}/{series_name}")
+					
+				dl_links = fili2.get_proper_links(url, best_audio=best_audio) 
+				
+				debug_list.append((dl_links, path_name))
+				
+				self.result_queue.put((dl_links, path_name))
+			print(f"Skonczono uzyskiwac linki dla {series_name}, sa to: {debug_list}")
+			informator.info(f"Skonczono uzyskiwac linki dla {series_name}, sa to: {debug_list}")
+		elif self.config_chunks[i].chckbutt_var.get():  
+			url = self.config_chunks[i].url
+			name = self.config_chunks[i].name
+			
+			if type == 'MOVIE':
+				movie_name = get_name_of_movie(url)
+				path_name = f'{self.dl_dir}/Filmy/{movie_name}.mp4'
+				
+				if os.path.isdir(f'{self.dl_dir}/Filmy'):
+					if os.path.exists(path_name):
+						informator.success(f'Już znajduje się na dysku: {path_name}')
+						return 
+				else:
+					informator.info(f'Tworzę folder {self.dl_dir}/Filmy')
+					os.mkdir(f"{self.dl_dir}/Filmy")
+				
+				dl_links = fili2.get_proper_links(url, best_audio=best_audio)
+				
+				self.result_queue.put((dl_links, path_name))
+				
+				
+			elif type == 'EPISODE':				
+				series_name = fili2.get_name_of_series(url)
+				ep_name = fili2.get_name_of_episode(url)
+				path_name = f'{self.dl_dir}/{series_name}/{ep_name}.mp4' 
+				if os.path.isdir(f"{self.dl_dir}/{series_name}"):
+					if os.path.exists(path_name):
+						informator.success(f'Już znajduje się na dysku: {path_name}')
+						return
+				else:
+					informator.info(f'Tworzę folder {self.dl_dir}/{series_name}')
+					os.mkdir(f"{self.dl_dir}/{series_name}")
+
+				dl_links = fili2.get_proper_links(url, best_audio=best_audio)	
+				
+				self.result_queue.put((dl_link, path_name))
+				
+				
 	def start_download(self): #urls to może być full_list albo url pojedynczy
 		for i in range(len(self.urls)):
 			type = self.config_chunks[i].type
@@ -214,7 +309,7 @@ class App():
 				fili2.start_2(full_list, dir_to_save=self.dl_dir, best_audio=best_audio)
 				continue
 			
-			if self.config_chunks[i].chckbutt_var.get(): # to zle jest 
+			if self.config_chunks[i].chckbutt_var.get(): 
 				url = self.config_chunks[i].url
 				name = self.config_chunks[i].name
 				if type == 'MOVIE':
@@ -222,6 +317,7 @@ class App():
 				elif type == 'EPISODE':
 					full_list = [(url, name)] #stosuje liste, bo tuple jest w jakiś sposób unpackowany jeśli jest w parametrze
 					fili2.start_2(full_list, dir_to_save=self.dl_dir, best_audio=best_audio) #zamieszczam w [] bo start_2 korzysta z pętli iterującej 
+			
 			
 	def stop(self):
 		downloader.pause_downloading()
@@ -279,18 +375,12 @@ class App():
 				
 				if self.is_valid_url(new_url):
 					print('NOWY LINK:', new_url)
-					#urls_box.delete(start_pos, end_pos)
-					#urls_box.insert(start_pos, new_url)
 					new_urls.append(new_url)
 				else:
-					# start_pos = urls_box.search(url, index=1.0) #start_pos ma typ string
-					# end_pos = str(int(float(start_pos))) + f'.{len(url)}' #najpierw zmieniam na int, żeby pozbyć się kropki, potem łącze linie z końcem
 					urls_box.tag_add("bad_url", start_pos, end_pos)# f'{pos:.1f}', f'{pos+1.0:.1f}')
 					all_valid = False
 			else: #nadaje defaultowe, gdyby ktoś poprawił jedynie literówkę, bo inaczej zostanie reszta tekstu normalnie			
 				print('DOBRY LINK:', url)
-				# start_pos = urls_box.search(url, index=1.0) #start_pos ma typ string
-				# end_pos = str(int(float(start_pos))) + f'.{len(url)}' #najpierw zmieniam na int, żeby pozbyć się kropki, potem łącze linie z końcem
 				urls_box.tag_delete("bad_url")
 				new_urls.append(url)
 		if all_valid == True:
@@ -305,17 +395,16 @@ class App():
 	
 	
 	def file_dialog(self):
-		dir = filedialog.askdirectory(title='Wybierz folder', initialdir=self.dl_dir).replace('/', '\\') #zamieniam slash na backslash dla kompatybilności
+		dir = filedialog.askdirectory(title='Wybierz folder', initialdir=self.dl_dir)
 		if dir: #bo jesli ktos zcanceluje to będzie empty
 			self.dl_dir = dir #initialdir=miejsce gdzie sie skończyło ostantio
 			text = self.dl_dir + '/Film|Nazwa_serialu'
 			if len(text) > 35:
 				self.file_label['text'] = text[:32] + '...'
 			else:
-				self.file_label['text'] = self.dl_dir + '\Film|Nazwa_serialu'
-		#print(self.file_label['font'].measure(self.dl_dir + '\Film|Nazwa_serialu'))
-		#print(self.file_label.winfo_width() + self.file_label.winfo_x(), self.audio_list.winfo_x())
-		
+				self.file_label['text'] = self.dl_dir + '/Filmy|Nazwa_serialu'
+
+				
 	def create_app(self):
 		#INITIALIZATION
 		self.root = tk.Tk()
@@ -324,9 +413,7 @@ class App():
 		
 		self.root.grid_columnconfigure(1, weight=1) #scalable x infobox, dl_progress
 		self.root.grid_rowconfigure(0, weight=1) #scalable y
-		#self.root.grid_rowconfigure(1, weight=1) #scalable x dl_progress
-		#self.root.bind("<Destroy>", _delete_window)
-		
+
 		#URLS BOX
 		self.urls_box = tk.Text(self.root, height=8, width=50, wrap='word')
 		self.urls_box.tag_config("placeholder", foreground="#b2b2b2")
@@ -353,8 +440,6 @@ class App():
 		#INFORMATOR
 		informator.initialize(self.root, self.info_box, self.dl_progress)
 
-		#dl_progress.start() #test
-
 		#CHECKBUTTONS NA PÓŹNIEJ
 		self.bottom_frame = tk.Frame(self.root, width=50)
 		self.bottom_frame.grid(row=2, column=0, sticky='NSWE')
@@ -364,9 +449,9 @@ class App():
 		self.file_butt = tk.Button(self.bottom_frame, text='Wybierz folder', command=self.file_dialog)
 		self.file_butt.grid(sticky='W',padx=2, pady=2, row=0, column=0)
 		
-		self.dl_dir = os.getcwd() #default
+		self.dl_dir = os.getcwd().replace('\\', '/') #zamieniam slash na backslash dla kompatybilności #default
 		
-		self.file_label = tk.Label(self.bottom_frame, text=self.dl_dir+'\Film|Nazwa_serialu', anchor='w')
+		self.file_label = tk.Label(self.bottom_frame, text=self.dl_dir+'/Filmy|Nazwa_serialu', anchor='w')
 		self.file_label.grid(sticky='WE', row=0, column=1)
 		#AUDIO LIST
 		self.audio_list = ttk.Combobox(self.bottom_frame, state='readonly')
@@ -374,21 +459,7 @@ class App():
 		
 		self.audio_list['values'] = ['Dubbing', 'Lektor PL','Napisy PL', 'Angielski', 'Inne']
 		self.audio_list.set('Lektor PL')
-		#for audio_name in ['Dubbing', 'Lektor PL','Napisy PL', 'Ang.', 'Inne']:
-			#self.audio_list.insert('end', audio_name)
-		# check_1 = tk.Checkbutton(chckbt_frame, text='TestAAAAAAA')
-		# check_1.grid(row=0, column=0, sticky='W')
 
-		# check_1 = tk.Checkbutton(chckbt_frame, text='Test2')
-		# check_1.grid(row=0, column=1, sticky='W')
-
-		# check_1 = tk.Checkbutton(chckbt_frame, text='Test3AAA')
-		# check_1.grid(row=1, column=1, sticky='W')
-
-		#PLACEHOLDER FOR CHECKBUTTONS
-		#self.nothing = tk.Canvas(self.root, width=50, height=20)
-		#self.nothing.grid(row=2, column=0)
-		
 		#START BUTTON
 		self.start_butt = tk.Button(self.root, text='Rozpocznij', command=self.initialize)#)lambda: start_download(lambda: start(self.urls_box))) #start
 		self.start_butt.grid(row=2, column=1, sticky='WE')
@@ -396,12 +467,23 @@ class App():
 		informator.info('Zainicjalizowano')
 
 		self.root.mainloop() 
-
+		
+		print('KONIEC')
 		self.root = None
-		downloader.stop_downloading()
-		os._exit(0)
+		clear()
+
+def clear():
+	#CLEARING 
+	import proxy_manager #importuje żeby móc wyczyścić
+	proxy_manager.wait_for_main_thread()
+	downloader.stop_downloading()
+	
+	os._exit(0)
 	
 	
-App()
-				
+try:
+	App()
+except:
+	print(traceback.format_exc())
+	clear()
 				

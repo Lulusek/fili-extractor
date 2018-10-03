@@ -5,8 +5,8 @@ import merge
 import time
 import shutil
 import gc
-import informator
-
+import informator 
+	
 total_downloaded = 0
 dl_pause = False
 dl_stop = False
