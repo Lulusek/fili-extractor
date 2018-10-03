@@ -17,8 +17,8 @@ import time
 		# urls.append(url)
 	# return urls
 	
-api_key = 'AIzaSyABRWlxG0Ppm9fXusfqVjdRIrpFNZsHrqo'
-cse_id = '005725991512029693991:tkqt7b-tjlo'
+api_key = PUT THERE YOURS
+cse_id = PUT THERE YOURS
 def search_link_from_google(name): #https://stackoverflow.com/questions/37083058/programmatically-searching-google-in-python-using-custom-search
 	try:
 		service = build("customsearch", 'v1', developerKey=api_key)
