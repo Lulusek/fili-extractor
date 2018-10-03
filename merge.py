@@ -1,7 +1,7 @@
 import os
 import re
 import informator
-
+	
 def atoi(text):
     return int(text) if text.isdigit() else text
 

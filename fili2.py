@@ -16,6 +16,7 @@ import time
 	# for url in sys.argv:
 		# urls.append(url)
 	# return urls
+	
 api_key = 'AIzaSyABRWlxG0Ppm9fXusfqVjdRIrpFNZsHrqo'
 cse_id = '005725991512029693991:tkqt7b-tjlo'
 def search_link_from_google(name): #https://stackoverflow.com/questions/37083058/programmatically-searching-google-in-python-using-custom-search
@@ -147,7 +148,7 @@ def start_movie(full_url, dir_to_save, best_audio):
 	if os.path.isdir(f'{dir_to_save}/Filmy'):
 		if os.path.exists(path_name):
 			print(f'Nie pobieram bo jest na dysku: {movie_name}')
-			informator.inform(f'Już znajduje się na dysku: {movie_name}')
+			informator.info(f'Już znajduje się na dysku: {movie_name}')
 			return
 	else:
 		os.mkdir(f'{dir_to_save}/Filmy')
@@ -162,7 +163,6 @@ def get(path_name, url, best_audio):
 		download_links = down2.get_dl_links(host_links, audio_hlinks)
 		down2.download(download_links, path_name)
 	
-	#def __get_from_dl_links
 	while True:
 		downloader.kill_printer()
 		try:
@@ -189,9 +189,19 @@ def get(path_name, url, best_audio):
 def get_proper_links(url, best_audio):
 	while True:
 		try:
+			informator.info('GETTING PROPER LINKS')
 			f_links, audio_flinks = fili_links.get_fili_links(url, best_audio) #fili_links czyli linki embed, sel_audio_links czyli linki z wybranego audio
+			if not f_links:
+				informator.warning("NIE MA FLINKOW DLA ", url)
+			informator.info('GOT F LINKS')
 			host_links, audio_hlinks = down2.get_host_links(f_links, audio_flinks)
+			if not host_links:
+				informator.warning("NIE MA HLINKOW DLA ", url)
+			informator.info('GOT H LINKS')
 			download_links = down2.get_dl_links(host_links, audio_hlinks)
+			if not download_links:
+				informator.warning("NIE MA DLINKOW DLA ", url)
+			informator.info('GOT D LINKS')
 			return download_links
 		except: 
 			if have_connection():
@@ -203,4 +213,25 @@ def get_proper_links(url, best_audio):
 					print('Trying to reconnect...')
 					informator.warning('Próbuję się połączyć...')
 					time.sleep(3)
-				
+
+def download(dl_links, path_name):
+	while True:
+		downloader.kill_printer()
+		try:
+			informator.info(f'Pobieram: {path_name}')
+			down2.download(dl_links, path_name)
+			informator.success(f"Pobrano: {path_name}!")
+			break
+		except: 
+			if have_connection():
+				print(traceback.format_exc())
+				print(f"Can't get: {path_name}")
+				informator.error(f"Nie udało się pobrać: {path_name}")
+				break
+			else: # nie mam internetu, więc czekam aż będę mieć i ponawiam
+				while not have_connection(): 
+					print('Trying to reconnect...')
+					informator.warning('Próbuję się połączyć...')
+					time.sleep(3)
+		print('Connected!')
+		informator.info('Połączono!')

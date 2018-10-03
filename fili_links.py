@@ -1,8 +1,7 @@
 from requests_html import HTMLSession
 import time
 import traceback
-
-
+	
 def get_fili_links(url, best_audio):
 	try:
 		if '/film/' in url:
@@ -19,7 +18,7 @@ def get(url, best='NAPISY_PL'):
 	session = HTMLSession()
 	r = session.get(url)#('https://fili.cc/serial/riverdale/s01e07/rozdzial-siodmy-samotnosc/11931'
 	if not r.ok: #CLOUDFLARE
-		time.sleep(6)
+		raise Exception('CloudFlare')
 	data_codes_el = r.html.find('#episode_page')[0]
 	code1, code2 = (data_codes_el.attrs['data-code'], data_codes_el.attrs['data-code2'])
 	salts_containers = r.html.find('#links')[0]
