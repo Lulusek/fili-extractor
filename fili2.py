@@ -77,6 +77,8 @@ def get_name_of_series(episode_url):
 def get_name_of_movie(movie_url):
 	m = re.search('/film/([\w-]+?)(\d\d\d\d)/', movie_url)
 	name = m.group(1).title().replace('-', ' ')
+	name = name[:-1] # usuwam ostatni znak, bo jest to ' ' (spacja). spowodowane to jest tym, 
+									 # że zamieniam - na spacje a link wygląda tak: https://fili.cc/film/niebieska-malpa-1987/5737
 	year = m.group(2)
 	full_name = f'[{year}] {name}'
 	return full_name
@@ -125,67 +127,80 @@ def have_connection():
 		return False
 		
 		
-def start_2(full_list, best_audio):
-	#base_url = "https://fili.cc"
-	print(full_list)
+def start_2(full_list, dir_to_save, best_audio):
 	series_name = get_name_of_series(full_list[0][0])
 	for url, ep_name in full_list: #full_list = [('https://fili.cc/serial/the-art-of-more/s01e06/ride-along/40569', '[s01e06] Ride Along'), ('https://fili.cc/serial/the-art-of-more/s01e07/the-quatrefoil/40570', '[s01e07] The Quatrefoil')]
-		path_name = f'{series_name}/{ep_name}.mp4'
-		if os.path.isdir(series_name):
+		path_name = f'{dir_to_save}/{series_name}/{ep_name}.mp4'
+		if os.path.isdir(f"{dir_to_save}/{series_name}"):
 			if os.path.exists(path_name):	
 				informator.success(f'Już znajduje się na dysku: {series_name}/{ep_name}')
 				continue
 		else:
-			os.mkdir(series_name)
-		try:
-			print(f'Zaczynam: {ep_name}')
-			informator.info(f'Zaczynam: {ep_name}')
-			get(path_name, url, best_audio)
-			informator.success(f"Pobrano {ep_name}!")
-		except:
-			print(f"Can't download {ep_name}, trying again...")
-			while True:
-				#SHUTDOWN DOWNLOADING
-				downloader.kill_all_chunks() 
-				downloader.kill_printer()
-				
-				if have_connection():
-					print(f"Can't get {get_ep_number(ep_name)}")
-					informator.error(f"Nie udało się pobrać {series_name}/[{get_ep_number(ep_name)}]")
-					print(traceback.format_exc())
-					break
-				else:
-					while not have_connection(): #czekam aż będę miał połączenie
-						print('Trying to reconnect...')
-						informator.warning('Próbuję się połączyć...')
-						time.sleep(3)
-				print('Connected!')
-				informator.info('Połączono!')
-				try:
-					informator.info(f'Próbuję ponownie: {ep_name}')
-					get(path_name, url, best_audio)
-					informator.success(f"Pobrano {ep_name}!")
-					break
-				except: # nie mam internetu, więc czekam aż będę mieć i ponawiam
-					print('Nie moge ponownie pobrac, lecz sprobuje jeszcze:', traceback.format_exc())
+			os.mkdir(f"{dir_to_save}/{series_name}")
+			
+		get(path_name, url, best_audio)
 		
 		
-def get(path_name, full_url, best_audio): # path_name - {series_name}/{ep_name}.mp4
-	#ep_name = f'{series_name}/{ep_name}.mp4'
-
-	f_links, audio_flinks = fili_links.get_fili_links(full_url, best_audio) #fili_links czyli linki embed, sel_audio_links czyli linki z wybranego audio
-	host_links, audio_hlinks = down2.get_host_links(f_links, audio_flinks)
-	download_links = down2.get_dl_links(host_links, audio_hlinks)
-	down2.download(download_links, path_name)
-	
-
-def start_movie(full_url, best_audio): #full_
+def start_movie(full_url, dir_to_save, best_audio): 
 	movie_name = get_name_of_movie(full_url)
-	path_name = f'Filmy/{movie_name}.mp4'
-	if not os.path.isdir('Filmy'):
+	path_name = f'{dir_to_save}/Filmy/{movie_name}.mp4'
+	if os.path.isdir(f'{dir_to_save}/Filmy'):
 		if os.path.exists(path_name):
 			print(f'Nie pobieram bo jest na dysku: {movie_name}')
 			informator.inform(f'Już znajduje się na dysku: {movie_name}')
 			return
-		os.mkdir('Filmy')
+	else:
+		os.mkdir(f'{dir_to_save}/Filmy')
+		
 	get(path_name, full_url, best_audio)
+	
+	
+def get(path_name, url, best_audio):
+	def __get(path_name, url, best_audio): 
+		f_links, audio_flinks = fili_links.get_fili_links(url, best_audio) #fili_links czyli linki embed, sel_audio_links czyli linki z wybranego audio
+		host_links, audio_hlinks = down2.get_host_links(f_links, audio_flinks)
+		download_links = down2.get_dl_links(host_links, audio_hlinks)
+		down2.download(download_links, path_name)
+	
+	def __get_from_dl_links
+	while True:
+		downloader.kill_printer()
+		try:
+			informator.info(f'Pobieram: {path_name}')
+			__get(path_name, url, best_audio)
+			informator.success(f"Pobrano: {path_name}!")
+			break
+		except: 
+			if have_connection():
+				print(traceback.format_exc())
+				print(f"Can't get: {path_name}")
+				informator.error(f"Nie udało się pobrać: {path_name}")
+				break
+			else: # nie mam internetu, więc czekam aż będę mieć i ponawiam
+				while not have_connection(): 
+					print('Trying to reconnect...')
+					informator.warning('Próbuję się połączyć...')
+					time.sleep(3)
+		print('Connected!')
+		informator.info('Połączono!')
+		
+
+#SŁUŻY DO POZYSKIWANIA LINKÓW JUŻ DO POBRANIA
+def get_proper_links(url, best_audio):
+	while True:
+		try:
+			f_links, audio_flinks = fili_links.get_fili_links(url, best_audio) #fili_links czyli linki embed, sel_audio_links czyli linki z wybranego audio
+			host_links, audio_hlinks = down2.get_host_links(f_links, audio_flinks)
+			download_links = down2.get_dl_links(host_links, audio_hlinks)
+			return download_links
+		except: 
+			if have_connection():
+				print(traceback.format_exc())
+				print(f"Can't get proper links to: {url}")
+				break
+			else:
+				while not have_connection(): 
+					print('Trying to reconnect...')
+					informator.warning('Próbuję się połączyć...')
+					time.sleep(3)
+				

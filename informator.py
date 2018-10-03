@@ -75,7 +75,7 @@ def bar_step(percent_downloaded):
 
 def bar_indtmt_start():
 	if progress_bar:
-		progress_bar.start(50)
+		progress_bar.start(300)
 		root.update()
 
 def stop_bar():

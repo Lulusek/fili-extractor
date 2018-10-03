@@ -1,12 +1,16 @@
 import tkinter as tk
+from tkinter import filedialog
 from tkinter import ttk
 import re
 import fili2
+import down2
 import informator
+import downloader #to pause
 import threading
 import sys
 import time
 import queue
+import os 
 
 class ConfigChunk():
 	MAX_DIGITS = 30
@@ -182,13 +186,20 @@ class App():
 			
 			
 	def start(self):
+		# def __get_later_links():
+			
+				
+		# dl_link_getter = threading.Thread(name='dl_link_getter', target=__get_later_links, daemon=True) #żeby się gui nie ścieło
+		# dl_link_getter.start()
+		self.start_butt['command'] = self.stop
+		self.start_butt['text'] = 'Pauza'
+		
 		self.queue.put(self.start_download)
+	
 		
-		
-	def start_download(self):
+	def start_download(self): #urls to może być full_list albo url pojedynczy
 		for i in range(len(self.urls)):
 			type = self.config_chunks[i].type
-			print(type)
 			best_audio = self.get_best_audio()
 			if type == 'SERIES':
 				start_index = self.config_chunks[i].start_slider.get()
@@ -200,19 +211,32 @@ class App():
 				for i in range(len(url_list)):
 					full_list.append((url_list[i], episode_list[i])) 
 				
-				fili2.start_2(full_list, best_audio=best_audio)
+				fili2.start_2(full_list, dir_to_save=self.dl_dir, best_audio=best_audio)
 				continue
 			
 			if self.config_chunks[i].chckbutt_var.get(): # to zle jest 
 				url = self.config_chunks[i].url
 				name = self.config_chunks[i].name
 				if type == 'MOVIE':
-					fili2.start_movie(url, best_audio=best_audio)
+					fili2.start_movie(url, dir_to_save=self.dl_dir, best_audio=best_audio)
 				elif type == 'EPISODE':
 					full_list = [(url, name)] #stosuje liste, bo tuple jest w jakiś sposób unpackowany jeśli jest w parametrze
-					fili2.start_2(full_list, best_audio=best_audio) #zamieszczam w [] bo start_2 korzysta z pętli iterującej 
+					fili2.start_2(full_list, dir_to_save=self.dl_dir, best_audio=best_audio) #zamieszczam w [] bo start_2 korzysta z pętli iterującej 
 			
-			
+	def stop(self):
+		downloader.pause_downloading()
+		
+		self.start_butt['command'] = self.resume
+		self.start_butt['text'] = 'Wznów'
+		
+		
+	def resume(self):
+		downloader.resume_downloading()
+	
+		self.start_butt['command'] = self.stop
+		self.start_butt['text'] = 'Pauza'
+		
+		
 	def get_best_audio(self):
 		regex = {
 					'Dubbing': 'DUBBING',
@@ -279,7 +303,19 @@ class App():
 			self.urls_box.delete(1.0, 3.0)
 			self.urls_box['wrap'] = 'none'
 	
-
+	
+	def file_dialog(self):
+		dir = filedialog.askdirectory(title='Wybierz folder', initialdir=self.dl_dir).replace('/', '\\') #zamieniam slash na backslash dla kompatybilności
+		if dir: #bo jesli ktos zcanceluje to będzie empty
+			self.dl_dir = dir #initialdir=miejsce gdzie sie skończyło ostantio
+			text = self.dl_dir + '/Film|Nazwa_serialu'
+			if len(text) > 35:
+				self.file_label['text'] = text[:32] + '...'
+			else:
+				self.file_label['text'] = self.dl_dir + '\Film|Nazwa_serialu'
+		#print(self.file_label['font'].measure(self.dl_dir + '\Film|Nazwa_serialu'))
+		#print(self.file_label.winfo_width() + self.file_label.winfo_x(), self.audio_list.winfo_x())
+		
 	def create_app(self):
 		#INITIALIZATION
 		self.root = tk.Tk()
@@ -320,11 +356,21 @@ class App():
 		#dl_progress.start() #test
 
 		#CHECKBUTTONS NA PÓŹNIEJ
-		self.chckbt_frame = tk.Frame(self.root, width=50, bg='RED')
-		self.chckbt_frame.grid(row=2, column=0, sticky='E')
+		self.bottom_frame = tk.Frame(self.root, width=50)
+		self.bottom_frame.grid(row=2, column=0, sticky='NSWE')
+		self.bottom_frame.grid_columnconfigure(0, weight=0) #żeby można było używać sticky='W' itp.
+		self.bottom_frame.grid_columnconfigure(1, weight=1) #żeby zajmował całe miejsce po środku
+		#FILE SET BUTTON
+		self.file_butt = tk.Button(self.bottom_frame, text='Wybierz folder', command=self.file_dialog)
+		self.file_butt.grid(sticky='W',padx=2, pady=2, row=0, column=0)
 		
-		self.audio_list = ttk.Combobox(self.chckbt_frame, state='readonly')
-		self.audio_list.grid(sticky='NSE')
+		self.dl_dir = os.getcwd() #default
+		
+		self.file_label = tk.Label(self.bottom_frame, text=self.dl_dir+'\Film|Nazwa_serialu', anchor='w')
+		self.file_label.grid(sticky='WE', row=0, column=1)
+		#AUDIO LIST
+		self.audio_list = ttk.Combobox(self.bottom_frame, state='readonly')
+		self.audio_list.grid(sticky='E', row=0, column=2, ipady=2)
 		
 		self.audio_list['values'] = ['Dubbing', 'Lektor PL','Napisy PL', 'Angielski', 'Inne']
 		self.audio_list.set('Lektor PL')
@@ -344,7 +390,7 @@ class App():
 		#self.nothing.grid(row=2, column=0)
 		
 		#START BUTTON
-		self.start_butt = tk.Button(self.root, text='Initialize', command=self.initialize)#)lambda: start_download(lambda: start(self.urls_box))) #start
+		self.start_butt = tk.Button(self.root, text='Rozpocznij', command=self.initialize)#)lambda: start_download(lambda: start(self.urls_box))) #start
 		self.start_butt.grid(row=2, column=1, sticky='WE')
 
 		informator.info('Zainicjalizowano')
@@ -352,6 +398,8 @@ class App():
 		self.root.mainloop() 
 
 		self.root = None
+		downloader.stop_downloading()
+		os._exit(0)
 	
 	
 App()

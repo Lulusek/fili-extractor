@@ -138,7 +138,6 @@ def get_movie(url, best='NAPISY_PL'):
 			except IndexError:
 				break
 	
-	print(best_salts)
 	fili_links = []	
 	for salt in best_salts:
 		fili_links.append(f'https://fili.cc/embed?type=movie&code={code1}&code2={code2}&salt={salt}')

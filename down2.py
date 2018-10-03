@@ -84,6 +84,7 @@ def captcha_avoid(url):
 			continue
 	raise Exception("Can't break captcha... :(")
 
+	
 def get_dl_links(host_links, audio_flinks):
 	def __get(host_url):
 		print(host_url)
@@ -202,6 +203,7 @@ def download(links, name):
 	#jeśli doszło do tego momentu to żaden z linków nie zadziałał, najprawdopodobniej z powodu braku internetu
 	raise Exception('Żaden z linków nie zadziałał (down2/download)')
 
+	
 def set_no_proxy():
 	proxy = urllib.request.ProxyHandler(proxies=None)
 	opener = urllib.request.build_opener(proxy)
