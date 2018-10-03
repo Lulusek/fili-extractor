@@ -14,7 +14,6 @@ def get_fili_links(url, best_audio):
 		
 		
 def get(url, best='NAPISY_PL'):
-	#print(best)
 	session = HTMLSession()
 	r = session.get(url)#('https://fili.cc/serial/riverdale/s01e07/rozdzial-siodmy-samotnosc/11931'
 	if not r.ok: #CLOUDFLARE
