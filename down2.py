@@ -12,7 +12,7 @@ import requests
 import downloader
 import fili_links
 import informator
-import proxy_manager
+
 
 useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0'
 headers = {'User-Agent': useragent}
@@ -60,6 +60,7 @@ def check_openload(file_url):
 			
 			
 def captcha_avoid(url):
+	import proxy_manager #tutaj to importuje, żeby nie było tego czekana na początku na GUI
 	print(url)
 	req = Request(url, headers=headers) 
 	start_time = time.time()
@@ -83,6 +84,7 @@ def captcha_avoid(url):
 			continue
 	raise Exception("Can't break captcha... :(")
 
+	
 def get_dl_links(host_links, audio_flinks):
 	def __get(host_url):
 		print(host_url)
@@ -201,6 +203,7 @@ def download(links, name):
 	#jeśli doszło do tego momentu to żaden z linków nie zadziałał, najprawdopodobniej z powodu braku internetu
 	raise Exception('Żaden z linków nie zadziałał (down2/download)')
 
+	
 def set_no_proxy():
 	proxy = urllib.request.ProxyHandler(proxies=None)
 	opener = urllib.request.build_opener(proxy)

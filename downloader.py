@@ -8,6 +8,8 @@ import gc
 import informator
 
 total_downloaded = 0
+dl_pause = False
+dl_stop = False
 #tmp_dir_path = 'tmp/'
 
 DL_OK = True
@@ -54,6 +56,8 @@ class my_chunk(object):
 			with requests.get(self.url, stream=True, headers=self.headers, timeout=15) as self.r:
 				with open(self.filename, 'ab') as f:
 					for chunk in self.r.iter_content(chunk_size=1024):
+						while dl_pause: # pauza stopuje
+							time.sleep(1)
 						#print("got")
 						if self.stop == True: #do reconnecting
 							print(f"Stopping at {self.curr_byte}")
@@ -80,7 +84,7 @@ class my_chunk(object):
 			else:
 				global DL_OK
 				DL_OK = False
-				kill_all_chunks()
+				stop_downloading()
 				raise Exception(f"Problems with host: 5 tries with bad results, host: {self.url}")
 		print("TOTAL END " + self.filename)
 
@@ -95,7 +99,7 @@ class my_chunk(object):
 				if len(sizes) > 10:
 					while len(sizes) > 10:
 						sizes.pop(0)
-					if sum(sizes) < 300000: #300 kB przez 10 sekund przez JEDNEGO chunka
+					if sum(sizes) < 600000: #600 kB przez 10 sekund przez JEDNEGO chunka
 						print("Download is slow, trying to get better result...")
 						self.reconnect()
 		
@@ -128,6 +132,7 @@ class printer(object):
 				avs = sum(self.all_speeds)/len(self.all_speeds)
 				print(f"Avs: {avs:.2f}")
 				break
+		informator.stop_bar()
 	
 	def printer_async(self, dl_size):
 		downloaded = 0
@@ -152,18 +157,29 @@ class printer(object):
 					break
 			except TypeError: #int() argument must be a string, a bytes-like object or a number, not 'NoneType'
 				break
+		informator.stop_bar()
 
-def kill_all_chunks():
+def stop_downloading():
 	for obj in gc.get_objects():
 		if isinstance(obj, my_chunk):
 			obj.stop = True
+	global dl_stop
+	dl_stop = True
 
 def kill_printer():
 	for obj in gc.get_objects():
 		if isinstance(obj, printer):
 			obj.stop_printing()
+			
+def pause_downloading():
+	global dl_pause
+	dl_pause = True
 
-def start(url, ep_name, chunk_count):
+def resume_downloading():
+	global dl_pause
+	dl_pause = False
+	
+def start(url, ep_name, chunk_count=8):
 	global DL_OK
 	DL_OK = True
 	url = url
@@ -203,7 +219,8 @@ def start(url, ep_name, chunk_count):
 			time.sleep(5)
 		
 		my_printer.stop_printing()
-		kill_all_chunks()
+		stop_downloading()
+		
 		if DL_OK == True: #bo gdy nie pobierze się wszystko to po 5 próbach w każdym chunku to i tak się wykona, a plik wyjściowy będzie skoruptowany
 			informator.info('Łączenie plików...')
 			merge.start(filenames, ep_filename, chunk_count)
@@ -233,6 +250,10 @@ def sync_download(url, f, ep_name):
 	try:
 		r = requests.get(url, stream=True, timeout=40)
 		for chunk in r.iter_content(chunk_size=1024): #1KB
+			while dl_pause: # pauza stopuje
+				time.sleep(1)
+			if dl_stop: #służy temu, że jak wyłączysz program to przestanie pobierać
+				return 
 			if chunk:
 				f.write(chunk)
 				global total_downloaded
@@ -281,7 +302,19 @@ def set_default():
 def clear(tmp_dir_path):
 	print('Cleaning...')
 	shutil.rmtree(tmp_dir_path)
-	
+
+# def test_p():
+	# time.sleep(5)
+	# pause_downloading()
+	# time.sleep(5)
+	# resume_downloading()
+
+# threading.Thread(target=test_p).start()
+
+# start('http://51.15.94.253/down/aHR0cHM6Ly9vcGVubG9hZC5jby9zdHJlYW0vNHdPRDJla3BRNWd-MTUzNzI4NTk1MH4yMDAxOmJjODo6fnh6N3l2RGNkP21pbWU9dHJ1ZQ,,/be79477c2bab104abb7cb6f191de334d-1537213954', 'test.mp4')
+# print("ZAINICJALIZOWANO DOWNLOADERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+
 #start('https://www3826.playercdn.net/187/0/eE3ZhCY20UlCgLMzWuvCoA/1536434821/170625/471FGXM8NKKUTC4DBEQGX.mp4', "Otes2.mp4", 8)
 #create_tmp_dir()
 
