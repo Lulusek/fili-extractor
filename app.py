@@ -25,8 +25,6 @@ class ConfigChunk():
 		self.container.grid(row=self.id, column=0,	sticky='NSWE')
 		self.container.grid_columnconfigure(0, weight=1) #https://stackoverflow.com/questions/28419763/expand-text-widget-to-fill-the-entire-parent-frame-in-tkinter
 		
-		#self.container['bg'] = 'yellow' #debug
-		
 		#EPISODE_LIST, URL_LIST, SERIES_NAME
 		if type == 'SERIES':
 			self.container.grid_columnconfigure(1, weight=1) #żeby po równo się rozjechały
@@ -39,8 +37,7 @@ class ConfigChunk():
 			self.movie(url, name)
 		
 		last_col, last_row = self.container.grid_size()
-		#print(last_col, last_row)
-		print(self.container.grid_size())
+		#print(self.container.grid_size())
 		self.sep = ttk.Separator(self.container, orient='horizontal')
 		self.sep.grid(column=0, columnspan=2, row=last_row, sticky='WE')
 		
@@ -172,7 +169,6 @@ class App():
 				episode_list = [episode for url, episode in full_list]#['['+fili2.get_ep_number(url)+'] '+episode for url, episode in full_list]
 				url_list = [url for url, episode in full_list]
 				series_name = fili2.get_name_of_series(full_list[0][0])
-				#print(full_list)
 				self.config_chunks.append(ConfigChunk(type='SERIES', root=self.config_box, episode_list=episode_list, 
 																							url_list=url_list, series_name=series_name, id=self.urls.index(url)))
 			elif url_type == 'EPISODE':
@@ -203,7 +199,6 @@ class App():
 					informator.success('Skończono') # to nie jest callowane z jakiegos powodu
 					break
 				print("DL LINKS: ", dl_links, " PATH_NAME: ", path_name)
-				#informator.info(str(dl_links)+str(path_name))4
 				if not dl_links:
 					informator.warning("NIE MA DLINKOW DLA ", path_name, ', KONTYNUUJE')
 					continue
@@ -219,7 +214,6 @@ class App():
 		
 		print (self.urls, len(self.urls))
 		for i in range(len(self.urls)):
-			#print('I  KTORE NIBY BUGUJE:', i)
 			self.queue.put(lambda: self.__get_later_links(i))
 		
 		threading.Thread(name='Downloader', target=simulate, daemon=True).start()
@@ -381,18 +375,12 @@ class App():
 				
 				if self.is_valid_url(new_url):
 					print('NOWY LINK:', new_url)
-					#urls_box.delete(start_pos, end_pos)
-					#urls_box.insert(start_pos, new_url)
 					new_urls.append(new_url)
 				else:
-					# start_pos = urls_box.search(url, index=1.0) #start_pos ma typ string
-					# end_pos = str(int(float(start_pos))) + f'.{len(url)}' #najpierw zmieniam na int, żeby pozbyć się kropki, potem łącze linie z końcem
 					urls_box.tag_add("bad_url", start_pos, end_pos)# f'{pos:.1f}', f'{pos+1.0:.1f}')
 					all_valid = False
 			else: #nadaje defaultowe, gdyby ktoś poprawił jedynie literówkę, bo inaczej zostanie reszta tekstu normalnie			
 				print('DOBRY LINK:', url)
-				# start_pos = urls_box.search(url, index=1.0) #start_pos ma typ string
-				# end_pos = str(int(float(start_pos))) + f'.{len(url)}' #najpierw zmieniam na int, żeby pozbyć się kropki, potem łącze linie z końcem
 				urls_box.tag_delete("bad_url")
 				new_urls.append(url)
 		if all_valid == True:
@@ -425,9 +413,7 @@ class App():
 		
 		self.root.grid_columnconfigure(1, weight=1) #scalable x infobox, dl_progress
 		self.root.grid_rowconfigure(0, weight=1) #scalable y
-		#self.root.grid_rowconfigure(1, weight=1) #scalable x dl_progress
-		#self.root.bind("<Destroy>", _delete_window)
-		
+
 		#URLS BOX
 		self.urls_box = tk.Text(self.root, height=8, width=50, wrap='word')
 		self.urls_box.tag_config("placeholder", foreground="#b2b2b2")
@@ -454,8 +440,6 @@ class App():
 		#INFORMATOR
 		informator.initialize(self.root, self.info_box, self.dl_progress)
 
-		#dl_progress.start() #test
-
 		#CHECKBUTTONS NA PÓŹNIEJ
 		self.bottom_frame = tk.Frame(self.root, width=50)
 		self.bottom_frame.grid(row=2, column=0, sticky='NSWE')
@@ -475,21 +459,7 @@ class App():
 		
 		self.audio_list['values'] = ['Dubbing', 'Lektor PL','Napisy PL', 'Angielski', 'Inne']
 		self.audio_list.set('Lektor PL')
-		#for audio_name in ['Dubbing', 'Lektor PL','Napisy PL', 'Ang.', 'Inne']:
-			#self.audio_list.insert('end', audio_name)
-		# check_1 = tk.Checkbutton(chckbt_frame, text='TestAAAAAAA')
-		# check_1.grid(row=0, column=0, sticky='W')
 
-		# check_1 = tk.Checkbutton(chckbt_frame, text='Test2')
-		# check_1.grid(row=0, column=1, sticky='W')
-
-		# check_1 = tk.Checkbutton(chckbt_frame, text='Test3AAA')
-		# check_1.grid(row=1, column=1, sticky='W')
-
-		#PLACEHOLDER FOR CHECKBUTTONS
-		#self.nothing = tk.Canvas(self.root, width=50, height=20)
-		#self.nothing.grid(row=2, column=0)
-		
 		#START BUTTON
 		self.start_butt = tk.Button(self.root, text='Rozpocznij', command=self.initialize)#)lambda: start_download(lambda: start(self.urls_box))) #start
 		self.start_butt.grid(row=2, column=1, sticky='WE')
