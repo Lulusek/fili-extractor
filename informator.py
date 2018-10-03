@@ -58,10 +58,11 @@ def __add(message, tag): #podlogi informuja o tym, ze to jest prywatna metoda
 
 def init_bar(determinate=False):
 	if progress_bar:
+		progress_bar.stop()
 		progress_bar['value'] = 0
 		if determinate:
 			progress_bar['mode'] = 'determinate'
-			progress_bar['maximum'] = 100
+			progress_bar['maximum'] = 1000
 		else:
 			progress_bar['mode'] = 'indeterminate'
 	else:
@@ -69,11 +70,14 @@ def init_bar(determinate=False):
 
 def bar_step(percent_downloaded):
 	if progress_bar:
-		progress_bar['value'] = int(percent_downloaded)
+		progress_bar['value'] = int(percent_downloaded*10) #*10 = zwiększam dokładność do 1/10 części
 		root.update()
 
 def bar_indtmt_start():
 	if progress_bar:
 		progress_bar.start(50)
 		root.update()
-	
+
+def stop_bar():
+	if progress_bar:
+		progress_bar.stop()

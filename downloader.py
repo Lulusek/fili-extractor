@@ -95,7 +95,7 @@ class my_chunk(object):
 				if len(sizes) > 10:
 					while len(sizes) > 10:
 						sizes.pop(0)
-					if sum(sizes) < 300000: #300 kB przez 10 sekund przez JEDNEGO chunka
+					if sum(sizes) < 600000: #600 kB przez 10 sekund przez JEDNEGO chunka
 						print("Download is slow, trying to get better result...")
 						self.reconnect()
 		
@@ -128,6 +128,7 @@ class printer(object):
 				avs = sum(self.all_speeds)/len(self.all_speeds)
 				print(f"Avs: {avs:.2f}")
 				break
+		informator.stop_bar()
 	
 	def printer_async(self, dl_size):
 		downloaded = 0
@@ -152,6 +153,7 @@ class printer(object):
 					break
 			except TypeError: #int() argument must be a string, a bytes-like object or a number, not 'NoneType'
 				break
+		informator.stop_bar()
 
 def kill_all_chunks():
 	for obj in gc.get_objects():
@@ -204,6 +206,7 @@ def start(url, ep_name, chunk_count):
 		
 		my_printer.stop_printing()
 		kill_all_chunks()
+		
 		if DL_OK == True: #bo gdy nie pobierze się wszystko to po 5 próbach w każdym chunku to i tak się wykona, a plik wyjściowy będzie skoruptowany
 			informator.info('Łączenie plików...')
 			merge.start(filenames, ep_filename, chunk_count)

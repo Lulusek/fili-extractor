@@ -12,7 +12,7 @@ import requests
 import downloader
 import fili_links
 import informator
-import proxy_manager
+
 
 useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0'
 headers = {'User-Agent': useragent}
@@ -60,6 +60,7 @@ def check_openload(file_url):
 			
 			
 def captcha_avoid(url):
+	import proxy_manager #tutaj to importuje, żeby nie było tego czekana na początku na GUI
 	print(url)
 	req = Request(url, headers=headers) 
 	start_time = time.time()

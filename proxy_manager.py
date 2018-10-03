@@ -87,8 +87,8 @@ def get_proxies_from_web(amount=50):
 																								 #keep page to be sure about closing chromium
 	html = site.html.html
 	
-	with open('a.html', 'w+') as f:
-		f.write(html)
+	#with open('a.html', 'w+') as f:
+	#	f.write(html)
 	
 	#s.close()
 	
@@ -323,8 +323,8 @@ atexit.register(wait_for_main_thread) #https://stackoverflow.com/questions/45267
 proxies, proxy_rank = get_proxies_from_file()
 
 
-if len(proxies) < MAX_SIZE:
-	Appender(MAX_SIZE-len(proxies)).append_new_proxies()
+if len(proxies) < (MAX_SIZE+MIN_SIZE)/2:
+	Appender((MAX_SIZE+MIN_SIZE)-len(proxies)).append_new_proxies()
 
 #print(get_proxies_from_web(100))
 Supervisor().start()
