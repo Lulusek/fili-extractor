@@ -35,10 +35,7 @@ def start(filenames, ep_filename, buffer_parts):
 				raise Exception("Can't open: " + tmp_filename)
 				break
 			os.remove(tmp_filename)
-# filenames = []
-# for file in os.listdir():
-	# if file.endswith('.tmp'):
-		# filenames.append(file)
+
 	filenames = sorted(filenames, key=natural_keys)
 	try:
 		with open(ep_filename, 'wb') as fout:

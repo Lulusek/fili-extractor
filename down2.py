@@ -16,27 +16,9 @@ import proxy_manager #tutaj to importuje, żeby nie było tego czekana na począ
 
 useragent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0'
 headers = {'User-Agent': useragent}
-
-
-
-# def start(url, name, best_audio):
-	# print("Starting: ", url, name)
-	# informator.info(f"Zaczynam: {name}")
-	# fili_links = get_fili_links(url, best_audio) #fili_links czyli linki embed
-	# host_links, audio_hlinks = get_host_links(fili_links)
-	# download_links = get_dl_links(host_links, audio_hlinks)
-	# download(download_links, name)
-
-# def start_2(fili_links, audio_flinks, name): #audio_flinks - fili links with selected audio
-	# print("Starting: ", url, name)
-	# informator.info(f"Zaczynam: {name}")
-	# host_links = get_host_links(fili_links, audio_flinks)
-	# download_links = get_dl_links(host_links, audio_hlinks)
-	# download(download_links, name)
 	
 	
 def get_host_links(fili_links, audio_flinks):
-	#informator.info('Szukanie linków na fili...')
 	host_links = []
 	audio_hlinks = []
 	for url in fili_links:
@@ -50,7 +32,6 @@ def get_host_links(fili_links, audio_flinks):
 				audio_hlinks.append(file_url)
 			print("Got it!")
 		except:
-			#print(traceback.format_exc())
 			print("Can't break captcha... Trying another link")
 	set_no_proxy()
 	return host_links, audio_hlinks
@@ -83,12 +64,9 @@ def captcha_avoid(url):
 			
 			print(file_url)
 			print(f'Avoided! czas potrzebny: {time.time() - start_time}')
-			#rank_proxy(proxy, 2)
+			
 			return file_url
 		except:
-			#print(traceback.format_exc())
-		#	print("Oops! Give me a next try...")
-			#rank_proxy(proxy, -7)
 			continue
 	raise Exception("Can't break captcha... :(")
 
@@ -111,7 +89,6 @@ def get_dl_links(host_links, audio_flinks):
 				session.close()
 				
 			except:
-				#informator.error(traceback.format_exc())
 				print(traceback.format_exc())
 				session.browser.close()
 				session.close()
@@ -123,20 +100,15 @@ def get_dl_links(host_links, audio_flinks):
 				print(f'Link to file: {dl_link}')
 				print(f"Got it in: {time.time()-start_time}")
 				
-				#informator.info(f'Znaleziono link!')
-				#dl_links.append(dl_link)
 				return dl_link
 				
 			except Exception: #lxml.etree.XPathEvalError:
-				#informator.error(traceback.format_exc())
-				#print(traceback.format_exc())
 				print("Oops, failed :( Trying again...")
 	
 	
 	def test_link(link):
 		print('Testing link')
-		#informator.info('Sprawdzanie prędkości hosta')
-		
+	
 		points = 0
 		try:
 			total_dl = 0
@@ -147,9 +119,7 @@ def get_dl_links(host_links, audio_flinks):
 					if time.time() > t_end:
 						break
 					total_dl += len(chunk) #zamiast zapisywać tutaj sobie dodam i wyjdzie na to samo
-
 				headers = r.headers #requests.head(link).headers
-
 				if 'content-length' in headers:
 					points += 10
 					print('Content-length support!')
@@ -172,7 +142,6 @@ def get_dl_links(host_links, audio_flinks):
 			return 'z' # a tu na końcu 
 	
 	print("Searching for download links...")
-	#informator.info("Szukanie linków do plików...")
 	dl_links = []
 	rank = {}
 	threads = []
