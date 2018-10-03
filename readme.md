@@ -1,0 +1,1 @@
+To run GUI you have to write "python app.py" in command-line.
